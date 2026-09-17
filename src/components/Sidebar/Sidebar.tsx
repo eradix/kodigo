@@ -1,4 +1,3 @@
-import * as ipc from "../../lib/ipc";
 import { parentOf } from "../../lib/paths";
 import { SidebarView, useStore } from "../../state/store";
 import { FileTree } from "./FileTree";
@@ -18,18 +17,12 @@ export function Sidebar({ onSwitchVault }: { onSwitchVault: () => void }) {
   const theme = useStore((s) => s.theme);
   const toggleTheme = useStore((s) => s.toggleTheme);
 
-  const newNote = async () => {
-    const store = useStore.getState();
-    try {
-      // Alongside the note you are in, matching Ctrl+N and the context menu,
-      // rather than always dropping new notes at the vault root.
-      const rel = await ipc.createNote(parentOf(store.activeRel), "Untitled");
-      await store.refreshTree();
-      store.openTab(rel);
-    } catch (e) {
-      store.toast(ipc.errorMessage(e), "error");
-    }
-  };
+  const createEntry = useStore((s) => s.createEntry);
+
+  // Both create alongside the note you are in, matching Ctrl+N and the tree's
+  // own context menu, rather than always landing at the vault root.
+  const create = (kind: "note" | "folder") =>
+    void createEntry(kind, parentOf(useStore.getState().activeRel));
 
   return (
     <aside className="sidebar">
@@ -37,8 +30,15 @@ export function Sidebar({ onSwitchVault }: { onSwitchVault: () => void }) {
         <span className="vault-name" title={vault?.root}>
           {vault?.name}
         </span>
-        <button className="icon-button" title="New note" onClick={() => void newNote()}>
+        <button className="icon-button" title="New note" onClick={() => create("note")}>
           +
+        </button>
+        <button
+          className="icon-button"
+          title="New folder"
+          onClick={() => create("folder")}
+        >
+          {"\u{1F5C1}"}
         </button>
         <button className="icon-button" title="Open another vault" onClick={onSwitchVault}>
           &#9776;

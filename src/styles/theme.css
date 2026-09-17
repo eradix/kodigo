@@ -466,6 +466,10 @@ input {
   font-size: 14px;
   line-height: 1.7;
   padding: 18px 0 40vh;
+  /* CodeMirror only scrolls a fixed-height editor when its scroller is told to.
+     Setting a height above without this leaves everything past the first
+     screenful unreachable. */
+  overflow: auto;
 }
 
 .cm-editor .cm-content {
@@ -936,4 +940,25 @@ input {
   color: var(--text-faint);
   font-style: normal;
   font-size: 11px;
+}
+
+.empty-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.empty-actions button {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.empty-actions button:hover {
+  background: var(--bg-hover);
+  color: var(--text);
 }

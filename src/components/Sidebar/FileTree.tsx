@@ -204,28 +204,22 @@ export function FileTree() {
   };
 
   const create = async (parentRel: string, kind: "note" | "folder") => {
-    try {
-      const name = kind === "note" ? "Untitled" : "New folder";
-      const rel =
-        kind === "note"
-          ? await ipc.createNote(parentRel, name)
-          : await ipc.createFolder(parentRel, name);
-      await store().refreshTree();
-      if (parentRel) setExpanded((current) => new Set(current).add(parentRel));
-      if (kind === "note") store().openTab(rel);
-      // Drop straight into renaming it: a note called "Untitled" is never the goal.
-      setRenaming(rel);
-    } catch (e) {
-      store().toast(ipc.errorMessage(e), "error");
-    }
+    const rel = await store().createEntry(kind, parentRel);
+    if (!rel) return;
+    if (parentRel) setExpanded((current) => new Set(current).add(parentRel));
+    // Drop straight into renaming it: "Untitled" is never what was wanted.
+    setRenaming(rel);
   };
 
   if (tree.length === 0) {
     return (
-      <p className="empty-state">
-        This vault has no notes yet. Use <strong>+</strong> above to create one, or drop
-        Markdown files onto the window.
-      </p>
+      <div className="empty-state">
+        <p>Nothing here yet. Drop Markdown files onto the window, or start one:</p>
+        <div className="empty-actions">
+          <button onClick={() => void create("", "note")}>New note</button>
+          <button onClick={() => void create("", "folder")}>New folder</button>
+        </div>
+      </div>
     );
   }
 

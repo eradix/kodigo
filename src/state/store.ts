@@ -43,6 +43,8 @@ interface Store {
   dismissToast: (id: number) => void;
   setIndexing: (progress: { done: number; total: number } | null) => void;
   setDocStats: (stats: DocStats | null) => void;
+  /** Creates a note or folder and refreshes the tree. Returns its path. */
+  createEntry: (kind: "note" | "folder", parentRel: string) => Promise<string | null>;
 }
 
 /** The last segment of a path, without its extension — what a tab is labelled. */
@@ -148,4 +150,19 @@ export const useStore = create<Store>((set, get) => ({
   setIndexing: (indexing) => set({ indexing }),
 
   setDocStats: (docStats) => set({ docStats }),
+
+  createEntry: async (kind, parentRel) => {
+    try {
+      const rel =
+        kind === "note"
+          ? await ipc.createNote(parentRel, "Untitled")
+          : await ipc.createFolder(parentRel, "New folder");
+      await get().refreshTree();
+      if (kind === "note") get().openTab(rel);
+      return rel;
+    } catch (e) {
+      get().toast(ipc.errorMessage(e), "error");
+      return null;
+    }
+  },
 }));
