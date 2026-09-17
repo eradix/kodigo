@@ -105,6 +105,8 @@ jobs:
             src-tauri/target/release/bundle/nsis/*.exe
 
       - name: Attach the installers to the release
+        # Windows runners default to PowerShell, which cannot parse this.
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
