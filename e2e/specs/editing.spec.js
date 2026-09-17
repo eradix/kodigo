@@ -75,7 +75,13 @@ describe("opening a vault", () => {
   it("opens a note when it is clicked", async () => {
     await openNote("welcome.md");
     expect(await editor().getText()).toContain("The first note.");
-    await expect($(".tab .name")).toHaveText("welcome");
+
+    const tab = await $('.tab[title="welcome.md"]');
+    await expect(tab).toExist();
+    // textContent rather than getText(): the label is clipped with
+    // text-overflow, and WebKit's driver reports rendered text as empty for it.
+    // The label is computed by displayName, which has its own unit tests.
+    expect(await tab.$(".name").getProperty("textContent")).toBe("welcome");
   });
 
   it("reveals a note inside a folder", async () => {
