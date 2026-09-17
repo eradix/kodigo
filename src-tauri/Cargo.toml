@@ -1,6 +1,6 @@
 [package]
 name = "kodigo"
-version = "0.1.1"
+version = "0.1.2"
 description = "A local-first Markdown notes app"
 authors = ["Gerald Digamon"]
 edition = "2021"
