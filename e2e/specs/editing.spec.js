@@ -1,13 +1,11 @@
 import { Key } from "webdriverio";
-import { currentVault, readNote, writeNote } from "../vault.js";
+import { readNote, writeNote } from "../vault.js";
 
 /**
  * The interactive surface: opening notes, typing, saving, and the editor
  * commands. Assertions go to the filesystem wherever possible — what ends up in
  * the .md file is the only thing that actually matters to the person writing.
  */
-
-const { root } = currentVault();
 
 /** Autosave is 600ms and the watcher debounce 300ms; this clears both. */
 const SETTLE = 2000;
@@ -61,7 +59,7 @@ describe("typing and saving", () => {
     await type(" Typed by a test.");
     await browser.pause(SETTLE);
 
-    expect(readNote(root, "welcome.md")).toContain("Typed by a test.");
+    expect(readNote("welcome.md")).toContain("Typed by a test.");
   });
 
   /**
@@ -82,7 +80,7 @@ describe("typing and saving", () => {
     await browser.keys("SECOND");
     await browser.pause(SETTLE);
 
-    const note = readNote(root, "second.md");
+    const note = readNote("second.md");
     expect(note).toContain("FIRSTSECOND");
     expect(note.startsWith("SECOND")).toBe(false);
   });
@@ -98,9 +96,9 @@ describe("typing and saving", () => {
     await type(" belongs-to-nested");
     await browser.pause(SETTLE);
 
-    expect(readNote(root, "welcome.md")).toContain("belongs-to-welcome");
-    expect(readNote(root, "welcome.md")).not.toContain("belongs-to-nested");
-    expect(readNote(root, "projects/nested.md")).toContain("belongs-to-nested");
+    expect(readNote("welcome.md")).toContain("belongs-to-welcome");
+    expect(readNote("welcome.md")).not.toContain("belongs-to-nested");
+    expect(readNote("projects/nested.md")).toContain("belongs-to-nested");
   });
 });
 
@@ -116,7 +114,7 @@ describe("editor commands", () => {
     await browser.keys([Key.Ctrl, "b"]);
     await browser.pause(SETTLE);
 
-    expect(readNote(root, "welcome.md")).toContain("**plainword**");
+    expect(readNote("welcome.md")).toContain("**plainword**");
   });
 
   it("inserts a fenced block from the slash menu", async () => {
@@ -128,14 +126,14 @@ describe("editor commands", () => {
     await browser.keys(Key.Enter);
     await browser.pause(SETTLE);
 
-    expect(readNote(root, "second.md")).toContain("```");
+    expect(readNote("second.md")).toContain("```");
   });
 });
 
 describe("changes made outside the app", () => {
   it("reloads a note that another program rewrote", async () => {
     await openNote("projects/nested.md");
-    writeNote(root, "projects/nested.md", "# Nested\n\nReplaced from outside.\n");
+    writeNote("projects/nested.md", "# Nested\n\nReplaced from outside.\n");
     await browser.waitUntil(
       async () => (await editor().getText()).includes("Replaced from outside."),
       {
