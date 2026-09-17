@@ -1,0 +1,88 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev libsoup-3.0-dev \
+            librsvg2-dev libayatana-appindicator3-dev libxdo-dev libssl-dev \
+            build-essential
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm test
+      - run: cargo test --manifest-path src-tauri/Cargo.toml
+      - run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+
+  e2e:
+    name: End-to-end
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build and WebDriver dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev libsoup-3.0-dev \
+            librsvg2-dev libayatana-appindicator3-dev libxdo-dev libssl-dev \
+            build-essential \
+            webkit2gtk-driver xvfb
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # tauri-driver is a fixed tool rather than part of the project, so it is
+      # cached on its own instead of being rebuilt every run.
+      - name: Cache tauri-driver
+        id: driver-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/tauri-driver
+          key: tauri-driver-${{ runner.os }}-v1
+
+      - name: Install tauri-driver
+        if: steps.driver-cache.outputs.cache-hit != 'true'
+        run: cargo install tauri-driver --locked
+
+      - run: npm ci
+
+      # A debug build: these tests exercise behaviour, and an optimised build
+      # would add several minutes for nothing.
+      - name: Build the app
+        run: |
+          npm run build
+          cargo build --manifest-path src-tauri/Cargo.toml
+
+      - name: Run the end-to-end suite
+        run: xvfb-run --auto-servernum npm run test:e2e
+        env:
+          KODIGO_BINARY: ${{ github.workspace }}/src-tauri/target/debug/kodigo

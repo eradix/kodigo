@@ -211,6 +211,36 @@ rejection, FTS5 query building, quick-switcher ranking, incremental rescans, and
 the watcher's handling of the app's own saves. The frontend suite covers the
 Markdown formatting commands, word counting and path helpers.
 
+### End to end
+
+```bash
+npm run test:e2e
+```
+
+Drives the compiled binary through `tauri-driver`: it opens a vault, clicks
+notes, types into the editor, and then checks the `.md` files on disk, because
+what lands in the file is the only thing that matters to whoever is writing.
+
+Every bug that has reached a user in this project lived in the gap between "the
+function is correct" and "the editor behaves", which the unit suites cannot see.
+The caret test is the clearest example — it types, waits for autosave, types
+again, and fails if the second burst lands at the top of the document.
+
+It needs a WebDriver and a build to drive:
+
+```bash
+sudo apt install -y webkit2gtk-driver && cargo install tauri-driver
+```
+
+```bash
+npm run build && cargo build --manifest-path src-tauri/Cargo.toml
+KODIGO_BINARY=src-tauri/target/debug/kodigo npm run test:e2e
+```
+
+The run creates its own vault under a temporary `XDG_DATA_HOME`, so it cannot
+see or damage your real notes or index. On a headless machine, prefix the
+command with `xvfb-run --auto-servernum`.
+
 ## Not built yet
 
 Wikilinks and backlinks are deliberately absent. The index schema carries an unused
