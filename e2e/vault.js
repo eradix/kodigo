@@ -20,10 +20,18 @@ export const BASE = path.join(os.tmpdir(), "kodigo-e2e-run");
 export const VAULT_ROOT = path.join(BASE, "vault");
 export const DATA_DIR = path.join(BASE, "data");
 
+// A note far taller than any window, used to check that the editor can be
+// scrolled all the way down.
+const LONG_NOTE =
+  "# Long note\n\n" +
+  Array.from({ length: 300 }, (_, i) => `Line ${i + 1} of a very long note.`).join("\n") +
+  "\n\nTHE-VERY-LAST-LINE\n";
+
 const NOTES = {
   "welcome.md": "# Welcome\n\nThe first note.\n",
   "second.md": "# Second\n\nAnother note entirely.\n",
   "projects/nested.md": "# Nested\n\nInside a folder.\n",
+  "long.md": LONG_NOTE,
 };
 
 /**

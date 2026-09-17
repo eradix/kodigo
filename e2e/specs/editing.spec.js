@@ -183,3 +183,46 @@ describe("changes made outside the app", () => {
     );
   });
 });
+
+describe("scrolling", () => {
+  /**
+   * Reported twice from the app before it was reproducible here: the bottom of
+   * a long note could not be reached. Two ways that happens, and this checks
+   * both — the editor's own scroller refusing to move, and the window growing
+   * past the viewport so the end is simply clipped off the screen.
+   */
+  it("reaches the bottom of a long note", async () => {
+    await openNote("long.md");
+
+    const layout = await browser.execute(() => {
+      const scroller = document.querySelector(".cm-scroller");
+      scroller.scrollTop = scroller.scrollHeight;
+      return {
+        scrollHeight: scroller.scrollHeight,
+        clientHeight: scroller.clientHeight,
+        scrollTop: scroller.scrollTop,
+        // Anything above zero means the layout is taller than the window, and
+        // body{overflow:hidden} is cutting the remainder off.
+        pageOverflow: document.documentElement.scrollHeight - window.innerHeight,
+        editorHostHeight: document.querySelector(".editor-host").clientHeight,
+        windowHeight: window.innerHeight,
+      };
+    });
+
+    expect(layout.pageOverflow).toBeLessThanOrEqual(1);
+    expect(layout.editorHostHeight).toBeLessThanOrEqual(layout.windowHeight);
+    expect(layout.scrollHeight).toBeGreaterThan(layout.clientHeight + 200);
+    expect(layout.scrollTop).toBeGreaterThan(0);
+  });
+
+  it("keeps the sidebar list scrollable too", async () => {
+    const layout = await browser.execute(() => {
+      const body = document.querySelector(".sidebar-body");
+      return {
+        height: body.clientHeight,
+        windowHeight: window.innerHeight,
+      };
+    });
+    expect(layout.height).toBeLessThanOrEqual(layout.windowHeight);
+  });
+});
