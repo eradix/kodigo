@@ -300,3 +300,104 @@ describe("theme", () => {
     expect(await browser.execute(() => document.documentElement.dataset.theme)).toBe("dark");
   });
 });
+
+describe("live preview", () => {
+  const rendered = () =>
+    browser.execute(() => document.querySelector(".cm-content").innerText);
+
+  /** Puts the caret on a known line, counting down from the top. */
+  async function caretOnLine(number) {
+    await editor().click();
+    await browser.keys([Key.Ctrl, Key.Home]);
+    for (let i = 1; i < number; i++) await browser.keys(Key.ArrowDown);
+    await browser.pause(400);
+  }
+
+  it("hides heading hashes until the caret is on that line", async () => {
+    await openNote("preview.md");
+    await caretOnLine(11);
+    const away = await rendered();
+    expect(away).toContain("Heading one");
+    expect(away).not.toContain("# Heading one");
+
+    await caretOnLine(1);
+    expect(await rendered()).toContain("# Heading one");
+  });
+
+  it("hides fence markers until the caret is inside the block", async () => {
+    await openNote("preview.md");
+    await caretOnLine(11);
+    const away = await rendered();
+    expect(away).toContain("const answer = 1;");
+    expect(away).not.toContain("```");
+
+    // Line 6 is the code itself, between the two fences.
+    await caretOnLine(6);
+    expect(await rendered()).toContain("```");
+  });
+
+  it("colours inline font tags and hides the tags themselves", async () => {
+    await openNote("preview.md");
+    await caretOnLine(11);
+
+    const away = await rendered();
+    expect(away).toContain("Sept 16, 2026");
+    expect(away).not.toContain("<font");
+    expect(away).not.toContain("</font>");
+
+    const colour = await browser.execute(() => {
+      const span = [...document.querySelectorAll(".cm-content span")].find(
+        (el) => el.textContent === "Sept 16, 2026",
+      );
+      return span ? getComputedStyle(span).color : null;
+    });
+    expect(colour).toBe("rgb(0, 128, 0)");
+
+    // The tags come back when the caret reaches them.
+    await caretOnLine(9);
+    expect(await rendered()).toContain("<font");
+  });
+
+  it("leaves the file on disk untouched by any of it", async () => {
+    // The whole point: what is hidden is presentation, never the document.
+    expect(readNote("preview.md")).toContain('## <font color="green">Sept 16, 2026</font>');
+    expect(readNote("preview.md")).toContain("# Heading one");
+    expect(readNote("preview.md")).toContain("```js");
+  });
+});
+
+describe("the caret", () => {
+  it("is drawn in a visible colour in both themes", async () => {
+    await openNote("welcome.md");
+    await editor().click();
+    await browser.pause(300);
+
+    const read = () =>
+      browser.execute(() => {
+        const caret = document.querySelector(".cm-cursor");
+        if (!caret) return null;
+        const style = getComputedStyle(caret);
+        return { colour: style.borderLeftColor, width: style.borderLeftWidth };
+      });
+
+    const dark = await read();
+    console.log("CARET dark:", JSON.stringify(dark));
+    expect(dark).not.toBeNull();
+    expect(dark.colour).not.toBe("rgba(0, 0, 0, 0)");
+
+    await $('[title="Switch to light theme"]').click();
+    await browser.pause(400);
+    await editor().click();
+    await browser.pause(300);
+
+    const light = await read();
+    console.log("CARET light:", JSON.stringify(light));
+    expect(light).not.toBeNull();
+    expect(light.colour).not.toBe("rgba(0, 0, 0, 0)");
+    // The two themes must not end up drawing the same caret.
+    expect(light.colour).not.toBe(dark.colour);
+
+    await $('[title="Switch to dark theme"]').click();
+    await browser.pause(300);
+  });
+});

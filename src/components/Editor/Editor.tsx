@@ -20,6 +20,7 @@ import type { NoteChanged } from "../../lib/types";
 import { useStore } from "../../state/store";
 import { codeBlocks } from "./codeBlocks";
 import { codeHighlighting } from "./highlight";
+import { livePreview } from "./livePreview";
 import { markdownStyling } from "./markdownStyling";
 import { formattingKeymap, toolbarActions } from "./shortcuts";
 import { slashCommands } from "./slashCommands";
@@ -161,6 +162,9 @@ export function Editor() {
           markdown({ base: markdownLanguage, codeLanguages: languages }),
           codeHighlighting,
           markdownStyling,
+          // After the styling plugin: this one hides the syntax that plugin has
+          // just finished colouring, once the caret has moved away from it.
+          livePreview,
           codeBlocks,
           slashCommands,
           EditorView.updateListener.of((update) => {

@@ -27,7 +27,25 @@ const LONG_NOTE =
   Array.from({ length: 300 }, (_, i) => `Line ${i + 1} of a very long note.`).join("\n") +
   "\n\nTHE-VERY-LAST-LINE\n";
 
+// Laid out so the caret can be put on an exact line by counting from the top.
+// 1 heading, 3 paragraph, 5-7 fenced block, 9 colour tag, 11 last line.
+const PREVIEW_NOTE = [
+  "# Heading one",
+  "",
+  "Plain paragraph text.",
+  "",
+  "```js",
+  "const answer = 1;",
+  "```",
+  "",
+  '## <font color="green">Sept 16, 2026</font>',
+  "",
+  "Last plain line.",
+  "",
+].join("\n");
+
 const NOTES = {
+  "preview.md": PREVIEW_NOTE,
   "welcome.md": "# Welcome\n\nThe first note.\n",
   "second.md": "# Second\n\nAnother note entirely.\n",
   "projects/nested.md": "# Nested\n\nInside a folder.\n",
