@@ -1,5 +1,7 @@
 import { Key } from "webdriverio";
-import { readNote, writeNote } from "../vault.js";
+import fs from "node:fs";
+import path from "node:path";
+import { VAULT_ROOT, readNote, writeNote } from "../vault.js";
 
 /**
  * The interactive surface: opening notes, typing, saving, and the editor
@@ -224,5 +226,61 @@ describe("scrolling", () => {
       };
     });
     expect(layout.height).toBeLessThanOrEqual(layout.windowHeight);
+  });
+});
+
+describe("creating notes and folders", () => {
+  /** The sidebar drops a new entry straight into an inline rename field. */
+  async function nameIt(name) {
+    const input = await $(".sidebar-body input.panel-input");
+    await input.waitForExist({ timeout: 10_000 });
+    await input.setValue(name);
+    await browser.keys(Key.Enter);
+    await browser.pause(600);
+  }
+
+  it("creates a note from the sidebar button", async () => {
+    await $('[title="New note"]').click();
+    await nameIt("made-by-button");
+    expect(fs.existsSync(path.join(VAULT_ROOT, "made-by-button.md"))).toBe(true);
+  });
+
+  /**
+   * Added because creating a folder was reported as missing: it existed only
+   * behind a right-click, and could not be reached at all in an empty vault.
+   */
+  it("creates a folder from the sidebar button", async () => {
+    await $('[title="New folder"]').click();
+    await nameIt("made-by-button-folder");
+    const made = path.join(VAULT_ROOT, "made-by-button-folder");
+    expect(fs.existsSync(made)).toBe(true);
+    expect(fs.statSync(made).isDirectory()).toBe(true);
+  });
+});
+
+describe("theme", () => {
+  it("switches between dark and light, and repaints", async () => {
+    const before = await browser.execute(() => ({
+      theme: document.documentElement.dataset.theme,
+      background: getComputedStyle(document.body).backgroundColor,
+    }));
+    expect(before.theme).toBe("dark");
+
+    await $('[title="Switch to light theme"]').click();
+    await browser.pause(400);
+
+    const after = await browser.execute(() => ({
+      theme: document.documentElement.dataset.theme,
+      background: getComputedStyle(document.body).backgroundColor,
+    }));
+    expect(after.theme).toBe("light");
+    // The attribute flipping is not enough; the tokens have to reach the page.
+    expect(after.background).not.toBe(before.background);
+    expect(after.background).toBe("rgb(255, 255, 255)");
+
+    // Put it back so later runs of this file start from the documented default.
+    await $('[title="Switch to dark theme"]').click();
+    await browser.pause(300);
+    expect(await browser.execute(() => document.documentElement.dataset.theme)).toBe("dark");
   });
 });
