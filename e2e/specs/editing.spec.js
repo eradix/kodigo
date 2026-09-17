@@ -230,33 +230,27 @@ describe("scrolling", () => {
 });
 
 describe("creating notes and folders", () => {
-  /** The sidebar drops a new entry straight into an inline rename field. */
+  /**
+   * The sidebar drops a new entry straight into an inline rename field.
+   *
+   * Typed through the keyboard rather than into an element handle: the tree
+   * refreshes again when the watcher notices the new file, and a handle taken
+   * before that goes stale. The field autofocuses with its stem selected, so
+   * typing replaces the name and keeps the extension.
+   */
   async function nameIt(name) {
-    const input = await $(".sidebar-body input.panel-input");
-    await input.waitForExist({ timeout: 10_000 });
-    await input.setValue(name);
+    const selector = ".sidebar-body input.panel-input";
+    await $(selector).waitForExist({ timeout: 10_000 });
+    // Let the watcher's refresh land before typing into the field.
+    await browser.pause(1200);
+    await $(selector).waitForExist({ timeout: 10_000 });
+    await browser.keys(name);
     await browser.keys(Key.Enter);
-    await browser.pause(600);
+    await browser.pause(800);
   }
 
   it("creates a note from the sidebar button", async () => {
     await $('[title="New note"]').click();
-    await browser.pause(1500);
-
-    // Report what the sidebar actually looks like. "Element not found" says
-    // nothing about whether the note was created, whether the tree refreshed,
-    // or whether an error was raised instead.
-    const state = await browser.execute(() => ({
-      inputs: document.querySelectorAll(".sidebar-body input").length,
-      rows: [...document.querySelectorAll(".sidebar-body [title]")].map((el) =>
-        el.getAttribute("title"),
-      ),
-      view: document.querySelector('[role="tab"][aria-selected="true"]')?.textContent,
-      toasts: [...document.querySelectorAll(".toast")].map((el) => el.textContent),
-    }));
-    console.log("SIDEBAR STATE:", JSON.stringify(state));
-    console.log("ON DISK:", JSON.stringify(fs.readdirSync(VAULT_ROOT)));
-
     await nameIt("made-by-button");
     expect(fs.existsSync(path.join(VAULT_ROOT, "made-by-button.md"))).toBe(true);
   });

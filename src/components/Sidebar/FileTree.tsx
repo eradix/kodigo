@@ -114,6 +114,11 @@ function RenameInput({
   onCancel: () => void;
 }) {
   const ref = useRef<HTMLInputElement>(null);
+  // Held in state rather than left uncontrolled. The tree refreshes again when
+  // the watcher notices the new file, and a re-render would otherwise reset a
+  // half-typed name back to "Untitled".
+  const [value, setValue] = useState(initial);
+
   useEffect(() => {
     const input = ref.current;
     if (!input) return;
@@ -121,15 +126,19 @@ function RenameInput({
     // Select the stem only, so typing replaces the name but keeps the extension.
     const dot = initial.lastIndexOf(".");
     input.setSelectionRange(0, dot > 0 ? dot : initial.length);
-  }, [initial]);
+    // Deliberately keyed on nothing: this runs once, when the field appears.
+    // Re-running it would re-select the text underneath the typist.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <input
       ref={ref}
       className="panel-input"
       style={{ margin: "1px 0" }}
-      defaultValue={initial}
-      onBlur={(e) => onCommit(e.currentTarget.value)}
+      value={value}
+      onChange={(e) => setValue(e.currentTarget.value)}
+      onBlur={() => onCommit(value)}
       onKeyDown={(e) => {
         if (e.key === "Enter") onCommit(e.currentTarget.value);
         if (e.key === "Escape") onCancel();
