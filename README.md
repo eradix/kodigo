@@ -67,9 +67,24 @@ Pick whichever fits how you work:
 MSI. Install [Rust](https://rustup.rs) and the *Desktop development with C++*
 workload from the Visual Studio Build Tools, then from a Windows checkout:
 
-```bash
-npm install && npm run tauri build
+```powershell
+npm install
+npm run tauri build
 ```
+
+Two commands, not one: `&&` is a parse error in Windows PowerShell 5.1, which is
+still the default shell.
+
+If the first one fails with *"npm.ps1 cannot be loaded because running scripts is
+disabled on this system"*, PowerShell is refusing to run npm's script wrapper.
+Allow locally-written scripts for your own account — no administrator needed:
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+Running the build from `cmd.exe` instead avoids the question entirely, since that
+uses `npm.cmd` rather than `npm.ps1`.
 
 You get an MSI and an NSIS `.exe` under `src-tauri\target\release\bundle\`.
 Both fetch the WebView2 runtime at install time if the machine lacks it, which is
