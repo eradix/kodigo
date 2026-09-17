@@ -3,7 +3,7 @@ import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { bracketMatching, indentOnInput } from "@codemirror/language";
 import { languages } from "@codemirror/language-data";
 import { highlightSelectionMatches, searchKeymap } from "@codemirror/search";
-import { EditorState } from "@codemirror/state";
+import { Annotation, EditorState } from "@codemirror/state";
 import {
   drawSelection,
   EditorView,
@@ -25,6 +25,12 @@ import { slashCommands } from "./slashCommands";
 
 /** How long typing pauses before the note is written to disk. */
 const AUTOSAVE_MS = 600;
+
+/**
+ * Marks a transaction as "this text came from disk, not from the user", so
+ * reloading a note does not mark it dirty and queue a save straight back.
+ */
+const ExternalReload = Annotation.define<boolean>();
 
 interface ToolbarPosition {
   x: number;
@@ -131,7 +137,8 @@ export function Editor() {
           slashCommands,
           EditorView.updateListener.of((update) => {
             const rel = shownRelRef.current;
-            if (update.docChanged && rel) {
+            const external = update.transactions.some((tr) => tr.annotation(ExternalReload));
+            if (update.docChanged && rel && !external) {
               pendingRef.current.set(rel, update.state.doc.toString());
               setDirty(rel, true);
               scheduleFlush();
@@ -192,19 +199,46 @@ export function Editor() {
     };
   }, [activeRel, closeTab, flush, makeState, toast]);
 
-  /** Replaces an open tab's document with what is now on disk. */
+  /** Brings an open tab in line with what is now on disk. */
   const reloadFromDisk = useCallback(
     async (relPath: string) => {
       try {
         const content = await ipc.readNote(relPath);
-        const state = makeState(content);
-        statesRef.current.set(relPath, state);
-        pendingRef.current.delete(relPath);
-        setDirty(relPath, false);
-        if (shownRelRef.current === relPath && viewRef.current) {
-          viewRef.current.setState(state);
+        const view = viewRef.current;
+        const shown = shownRelRef.current === relPath && view !== null;
+        const current = shown
+          ? view!.state.doc.toString()
+          : statesRef.current.get(relPath)?.doc.toString();
+
+        const settle = () => {
+          pendingRef.current.delete(relPath);
+          setDirty(relPath, false);
+          setConflict((existing) => (existing === relPath ? null : existing));
+        };
+
+        // The file is already what we have. Rebuilding the editor here would
+        // throw away the cursor, the scroll position and the undo history for
+        // no gain, which is exactly what a stray save-echo used to do.
+        if (current === content) {
+          settle();
+          return;
         }
-        setConflict((current) => (current === relPath ? null : current));
+
+        if (shown) {
+          // Replace the text in place rather than swapping in a fresh state, and
+          // hold the cursor at the same offset, so an edit made elsewhere in the
+          // file does not move the caret out from under the typist.
+          const caret = Math.min(view!.state.selection.main.head, content.length);
+          view!.dispatch({
+            changes: { from: 0, to: view!.state.doc.length, insert: content },
+            selection: { anchor: caret },
+            annotations: ExternalReload.of(true),
+          });
+          statesRef.current.set(relPath, view!.state);
+        } else {
+          statesRef.current.set(relPath, makeState(content));
+        }
+        settle();
       } catch (e) {
         toast(ipc.errorMessage(e), "error");
       }

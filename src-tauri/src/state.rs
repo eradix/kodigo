@@ -62,14 +62,20 @@ impl AppState {
     }
 
     /// True when `path` still looks exactly as this process last wrote it.
-    /// Consumes the record, so a later external edit is reported normally.
-    pub fn take_self_write(&self, rel: &str, path: &Path) -> bool {
-        let mut writes = self.self_writes.lock().unwrap();
+    ///
+    /// Deliberately does **not** consume the record. A single save arrives as a
+    /// batch naming the same file several times, and an earlier version of this
+    /// dropped the record on the first of them, so the rest were reported as
+    /// somebody else's edit and the editor reloaded itself mid-typing. The
+    /// record instead lives until the next write to that path replaces it.
+    ///
+    /// The cost is a genuine external edit that lands in the same wall-clock
+    /// second as our own write *and* leaves the file exactly as many bytes long;
+    /// that one is not noticed.
+    pub fn is_self_write(&self, rel: &str, path: &Path) -> bool {
+        let writes = self.self_writes.lock().unwrap();
         match (writes.get(rel).copied(), fingerprint(path)) {
-            (Some(recorded), Some(current)) if recorded == current => {
-                writes.remove(rel);
-                true
-            }
+            (Some(recorded), Some(current)) => recorded == current,
             _ => false,
         }
     }
@@ -90,4 +96,50 @@ pub fn fingerprint(path: &Path) -> Option<(u64, i64)> {
         .ok()?
         .as_secs() as i64;
     Some((meta.len(), mtime))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp_note(name: &str, body: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("kodigo-state-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join(name);
+        std::fs::write(&path, body).unwrap();
+        path
+    }
+
+    #[test]
+    fn one_save_stays_suppressed_across_a_whole_event_batch() {
+        let state = AppState::default();
+        let path = temp_note("batch.md", "saved by us");
+        state.remember_self_write("batch.md", &path);
+
+        // A debounced batch names the same file several times; every one of them
+        // has to be recognised, not just the first.
+        for attempt in 0..3 {
+            assert!(
+                state.is_self_write("batch.md", &path),
+                "occurrence {attempt} was treated as an external edit"
+            );
+        }
+    }
+
+    #[test]
+    fn an_edit_by_someone_else_is_still_reported() {
+        let state = AppState::default();
+        let path = temp_note("external.md", "saved by us");
+        state.remember_self_write("external.md", &path);
+
+        std::fs::write(&path, "a longer body written by another editor").unwrap();
+        assert!(!state.is_self_write("external.md", &path));
+    }
+
+    #[test]
+    fn a_file_we_never_wrote_is_never_suppressed() {
+        let state = AppState::default();
+        let path = temp_note("unknown.md", "hello");
+        assert!(!state.is_self_write("unknown.md", &path));
+    }
 }
