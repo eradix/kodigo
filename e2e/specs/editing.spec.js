@@ -252,7 +252,9 @@ describe("creating notes and folders", () => {
   it("creates a note from the sidebar button", async () => {
     await $('[title="New note"]').click();
     await nameIt("made-by-button");
-    expect(fs.existsSync(path.join(VAULT_ROOT, "made-by-button.md"))).toBe(true);
+    // Asserted against the listing rather than existsSync: a failure then names
+    // what was actually written instead of only saying "false".
+    expect(fs.readdirSync(VAULT_ROOT)).toContain("made-by-button.md");
   });
 
   /**
@@ -262,9 +264,8 @@ describe("creating notes and folders", () => {
   it("creates a folder from the sidebar button", async () => {
     await $('[title="New folder"]').click();
     await nameIt("made-by-button-folder");
-    const made = path.join(VAULT_ROOT, "made-by-button-folder");
-    expect(fs.existsSync(made)).toBe(true);
-    expect(fs.statSync(made).isDirectory()).toBe(true);
+    expect(fs.readdirSync(VAULT_ROOT)).toContain("made-by-button-folder");
+    expect(fs.statSync(path.join(VAULT_ROOT, "made-by-button-folder")).isDirectory()).toBe(true);
   });
 });
 
