@@ -6,8 +6,10 @@ import {
   insertLink,
   setHeading,
   toggleBold,
+  toggleBullet,
   toggleInlineCode,
   toggleQuote,
+  toggleTask,
   FormatCommand,
 } from "./shortcuts";
 
@@ -108,5 +110,45 @@ describe("insertions", () => {
     const result = run(insertLink, "see the docs", 8, 12);
     expect(result.doc).toBe("see the [docs]()");
     expect(result.selection.head).toBe(result.doc.length - 1);
+  });
+});
+
+describe("list markers", () => {
+  it("converts a bullet into a task instead of stacking markers", () => {
+    expect(run(toggleTask, "- buy milk", 0).doc).toBe("- [ ] buy milk");
+  });
+
+  it("converts a task back into a plain bullet", () => {
+    expect(run(toggleBullet, "- [ ] buy milk", 0).doc).toBe("- buy milk");
+  });
+
+  it("turns a task off completely", () => {
+    expect(run(toggleTask, "- [ ] buy milk", 0).doc).toBe("buy milk");
+  });
+
+  it("replaces a numbered marker rather than prefixing it", () => {
+    expect(run(toggleBullet, "1. first", 0).doc).toBe("- first");
+  });
+
+  it("recognises an already-ticked task", () => {
+    expect(run(toggleTask, "- [x] done", 0).doc).toBe("done");
+  });
+
+  it("keeps indentation when toggling a nested item", () => {
+    expect(run(toggleTask, "    - nested", 0).doc).toBe("    - [ ] nested");
+  });
+
+  it("brings a mixed selection up to the same form", () => {
+    const result = run(toggleBullet, "one\n- two\nthree", 0, 13);
+    expect(result.doc).toBe("- one\n- two\n- three");
+  });
+
+  it("leaves blank lines alone inside a multi-line selection", () => {
+    const result = run(toggleBullet, "one\n\ntwo", 0, 8);
+    expect(result.doc).toBe("- one\n\n- two");
+  });
+
+  it("still quotes a list line rather than replacing its marker", () => {
+    expect(run(toggleQuote, "- item", 0).doc).toBe("> - item");
   });
 });

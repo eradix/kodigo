@@ -98,17 +98,41 @@ export function setHeading(level: number): FormatCommand {
   };
 }
 
-/** Toggles a line prefix such as `> `, `- ` or `- [ ] ` on the selected lines. */
-export function toggleLinePrefix(prefix: string, pattern: RegExp): FormatCommand {
+/** Any leading list marker: a bullet, a task box, or a number. */
+const LIST_MARKER = /^(?:[-*+]\s+(?:\[[ xX]\]\s+)?|\d+[.)]\s+)/;
+
+const indentOf = (text: string) => /^\s*/.exec(text)![0];
+
+/**
+ * Toggles a line prefix such as `> `, `- ` or `- [ ] ` on the selected lines.
+ *
+ * `detect` asks whether a line is already in the target form, while `strip` says
+ * what leading run the prefix replaces. Keeping them apart is what lets a bullet
+ * become a task rather than growing a second marker in front of the first.
+ */
+export function toggleLinePrefix(
+  prefix: string,
+  detect: RegExp,
+  strip: RegExp = detect,
+): FormatCommand {
   return (view) => {
-    const lines = selectedLines(view);
-    const allPrefixed = lines.every((line) => pattern.test(line.text));
+    const selected = selectedLines(view);
+    // A blank line in the middle of a selected block is a paragraph break, not
+    // an empty list item.
+    const lines =
+      selected.length > 1 ? selected.filter((line) => line.text.trim() !== "") : selected;
+    if (lines.length === 0) return true;
+
+    const body = (line: Line) => line.text.slice(indentOf(line.text).length);
+    const allPresent = lines.every((line) => detect.test(body(line)));
+
     const changes = lines.map((line) => {
-      const existing = pattern.exec(line.text)?.[0] ?? "";
+      const indent = indentOf(line.text).length;
+      const existing = strip.exec(body(line))?.[0] ?? "";
       return {
-        from: line.from,
-        to: line.from + existing.length,
-        insert: allPrefixed ? "" : existing ? prefix : prefix,
+        from: line.from + indent,
+        to: line.from + indent + existing.length,
+        insert: allPresent ? "" : prefix,
       };
     });
     view.dispatch({ changes, userEvent: "input.format" });
@@ -117,8 +141,13 @@ export function toggleLinePrefix(prefix: string, pattern: RegExp): FormatCommand
 }
 
 export const toggleQuote = toggleLinePrefix("> ", /^>\s?/);
-export const toggleBullet = toggleLinePrefix("- ", /^[-*+]\s+/);
-export const toggleTask = toggleLinePrefix("- [ ] ", /^[-*+]\s+\[[ xX]\]\s+/);
+// A bullet is only a plain bullet when no task box follows it.
+export const toggleBullet = toggleLinePrefix(
+  "- ",
+  /^[-*+]\s+(?!\[[ xX]\]\s)/,
+  LIST_MARKER,
+);
+export const toggleTask = toggleLinePrefix("- [ ] ", /^[-*+]\s+\[[ xX]\]\s+/, LIST_MARKER);
 
 /** Wraps the selection in a fenced block, leaving the cursor on the info string. */
 export const insertCodeBlock: FormatCommand = (view) => {

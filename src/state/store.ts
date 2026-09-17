@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import * as ipc from "../lib/ipc";
+import type { DocStats } from "../lib/text";
 import type { TreeNode, Vault } from "../lib/types";
 
 export type SidebarView = "files" | "search" | "tags";
@@ -26,6 +27,8 @@ interface Store {
   theme: Theme;
   toasts: Toast[];
   indexing: { done: number; total: number } | null;
+  /** Word and character counts for the note in front, for the status bar. */
+  docStats: DocStats | null;
 
   setVault: (vault: Vault | null, tree: TreeNode[]) => void;
   refreshTree: () => Promise<void>;
@@ -39,6 +42,7 @@ interface Store {
   toast: (message: string, kind?: Toast["kind"]) => void;
   dismissToast: (id: number) => void;
   setIndexing: (progress: { done: number; total: number } | null) => void;
+  setDocStats: (stats: DocStats | null) => void;
 }
 
 /** The last segment of a path, without its extension — what a tab is labelled. */
@@ -70,6 +74,7 @@ export const useStore = create<Store>((set, get) => ({
   theme: initialTheme(),
   toasts: [],
   indexing: null,
+  docStats: null,
 
   setVault: (vault, tree) => set({ vault, tree, tabs: [], activeRel: null }),
 
@@ -141,4 +146,6 @@ export const useStore = create<Store>((set, get) => ({
   dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 
   setIndexing: (indexing) => set({ indexing }),
+
+  setDocStats: (docStats) => set({ docStats }),
 }));

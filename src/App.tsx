@@ -10,15 +10,9 @@ import { TabBar } from "./components/TabBar";
 import { Toasts } from "./components/Toasts";
 import { Welcome } from "./components/Welcome";
 import * as ipc from "./lib/ipc";
+import { parentOf } from "./lib/paths";
 import type { IndexProgress } from "./lib/types";
 import { useStore } from "./state/store";
-
-/** The folder a drop lands in: next to the open note, else the vault root. */
-function dropDestination(activeRel: string | null): string {
-  if (!activeRel) return "";
-  const slash = activeRel.lastIndexOf("/");
-  return slash === -1 ? "" : activeRel.slice(0, slash);
-}
 
 export default function App() {
   const vault = useStore((s) => s.vault);
@@ -26,6 +20,7 @@ export default function App() {
   const activeRel = useStore((s) => s.activeRel);
   const tabs = useStore((s) => s.tabs);
   const indexing = useStore((s) => s.indexing);
+  const docStats = useStore((s) => s.docStats);
   const setVault = useStore((s) => s.setVault);
   const refreshTree = useStore((s) => s.refreshTree);
   const toast = useStore((s) => s.toast);
@@ -116,10 +111,7 @@ export default function App() {
         return;
       }
       try {
-        const result = await ipc.importPaths(
-          event.payload.paths,
-          dropDestination(store.activeRel),
-        );
+        const result = await ipc.importPaths(event.payload.paths, parentOf(store.activeRel));
         await store.refreshTree();
         if (result.imported[0]) store.openTab(result.imported[0]);
         if (result.imported.length > 0) {
@@ -159,7 +151,7 @@ export default function App() {
         e.preventDefault();
         if (!store.vault) return;
         void ipc
-          .createNote(dropDestination(store.activeRel), "Untitled")
+          .createNote(parentOf(store.activeRel), "Untitled")
           .then(async (rel) => {
             await store.refreshTree();
             store.openTab(rel);
@@ -195,6 +187,13 @@ export default function App() {
             {indexing && (
               <span>
                 Indexing {indexing.done}/{indexing.total}
+              </span>
+            )}
+            {docStats && (
+              <span>
+                {docStats.words.toLocaleString()} {docStats.words === 1 ? "word" : "words"}
+                {" \u00b7 "}
+                {docStats.chars.toLocaleString()} chars
               </span>
             )}
             <span>{tabs.length} open</span>

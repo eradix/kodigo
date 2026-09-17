@@ -67,7 +67,9 @@ function buildDecorations(view: EditorView): DecorationSet {
       enter: (node) => {
         // Inside frontmatter the Markdown tree is meaningless (it parses the
         // block as a setext heading and a paragraph), so leave it alone.
-        if (fm && node.from < view.state.doc.line(fm[1]).to) return;
+        // `false` also stops the walk descending, which a bare `return` did not:
+        // the children were still being styled as Markdown.
+        if (fm && node.from < view.state.doc.line(fm[1]).to) return false;
 
         const heading = headings[node.name];
         if (heading && node.to > node.from) {

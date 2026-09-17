@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as ipc from "../../lib/ipc";
+import { ancestorsOf } from "../../lib/paths";
 import type { TreeNode } from "../../lib/types";
 import { useStore } from "../../state/store";
 
@@ -12,16 +13,33 @@ interface MenuTarget {
 
 interface TreeRowProps {
   node: TreeNode;
+  expanded: Set<string>;
+  onToggle: (relPath: string) => void;
   renaming: string | null;
   onRename: (node: TreeNode, name: string) => void;
   onCancelRename: () => void;
   onMenu: (target: MenuTarget) => void;
 }
 
-function TreeRow({ node, renaming, onRename, onCancelRename, onMenu }: TreeRowProps) {
+function TreeRow({
+  node,
+  expanded,
+  onToggle,
+  renaming,
+  onRename,
+  onCancelRename,
+  onMenu,
+}: TreeRowProps) {
   const activeRel = useStore((s) => s.activeRel);
   const openTab = useStore((s) => s.openTab);
-  const [open, setOpen] = useState(false);
+  const rowRef = useRef<HTMLButtonElement>(null);
+  const isActive = activeRel === node.relPath;
+
+  // Follow the selection when it is moved from elsewhere — a search hit, the
+  // quick switcher, a freshly created note.
+  useEffect(() => {
+    if (isActive) rowRef.current?.scrollIntoView({ block: "nearest" });
+  }, [isActive]);
 
   const contextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -40,15 +58,16 @@ function TreeRow({ node, renaming, onRename, onCancelRename, onMenu }: TreeRowPr
   }
 
   if (node.isDir) {
+    const open = expanded.has(node.relPath);
     return (
       <div>
         <button
           className="tree-row"
-          onClick={() => setOpen((v) => !v)}
+          onClick={() => onToggle(node.relPath)}
           onContextMenu={contextMenu}
           title={node.relPath}
         >
-          <span className={`chevron${open ? " open" : ""}`}>›</span>
+          <span className={`chevron${open ? " open" : ""}`}>&rsaquo;</span>
           <span className="label">{node.name}</span>
         </button>
         {open && (
@@ -57,6 +76,8 @@ function TreeRow({ node, renaming, onRename, onCancelRename, onMenu }: TreeRowPr
               <TreeRow
                 key={child.relPath}
                 node={child}
+                expanded={expanded}
+                onToggle={onToggle}
                 renaming={renaming}
                 onRename={onRename}
                 onCancelRename={onCancelRename}
@@ -71,7 +92,8 @@ function TreeRow({ node, renaming, onRename, onCancelRename, onMenu }: TreeRowPr
 
   return (
     <button
-      className={`tree-row${activeRel === node.relPath ? " selected" : ""}`}
+      ref={rowRef}
+      className={`tree-row${isActive ? " selected" : ""}`}
       onClick={() => openTab(node.relPath)}
       onContextMenu={contextMenu}
       title={node.relPath}
@@ -118,8 +140,25 @@ function RenameInput({
 
 export function FileTree() {
   const tree = useStore((s) => s.tree);
+  const activeRel = useStore((s) => s.activeRel);
   const [menu, setMenu] = useState<MenuTarget | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  // Open whatever folders are needed to show the active note. Folders the user
+  // opened by hand stay open; this only ever adds.
+  useEffect(() => {
+    if (!activeRel) return;
+    const needed = ancestorsOf(activeRel);
+    if (needed.length === 0) return;
+    setExpanded((current) => {
+      const missing = needed.filter((folder) => !current.has(folder));
+      if (missing.length === 0) return current;
+      const next = new Set(current);
+      for (const folder of missing) next.add(folder);
+      return next;
+    });
+  }, [activeRel]);
 
   useEffect(() => {
     if (!menu) return;
@@ -131,6 +170,13 @@ export function FileTree() {
       window.removeEventListener("resize", close);
     };
   }, [menu]);
+
+  const toggle = (relPath: string) =>
+    setExpanded((current) => {
+      const next = new Set(current);
+      if (!next.delete(relPath)) next.add(relPath);
+      return next;
+    });
 
   const store = useStore.getState;
 
@@ -165,6 +211,7 @@ export function FileTree() {
           ? await ipc.createNote(parentRel, name)
           : await ipc.createFolder(parentRel, name);
       await store().refreshTree();
+      if (parentRel) setExpanded((current) => new Set(current).add(parentRel));
       if (kind === "note") store().openTab(rel);
       // Drop straight into renaming it: a note called "Untitled" is never the goal.
       setRenaming(rel);
@@ -195,6 +242,8 @@ export function FileTree() {
         <TreeRow
           key={node.relPath}
           node={node}
+          expanded={expanded}
+          onToggle={toggle}
           renaming={renaming}
           onRename={(n, name) => void commitRename(n, name)}
           onCancelRename={() => setRenaming(null)}

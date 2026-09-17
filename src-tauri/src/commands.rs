@@ -237,7 +237,7 @@ pub fn quick_switch(state: State<AppState>, query: String, limit: usize) -> Resu
 
 #[tauri::command]
 pub fn list_tags(state: State<AppState>) -> Result<Vec<TagCount>> {
-    state.with_db(|conn| search::list_tags(conn))
+    state.with_db(search::list_tags)
 }
 
 #[tauri::command]

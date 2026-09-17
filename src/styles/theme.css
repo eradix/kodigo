@@ -818,3 +818,122 @@ input {
   background: color-mix(in srgb, var(--danger) 20%, transparent);
   color: var(--danger);
 }
+
+/* ------------------------------------------------- in-note search (Ctrl+F) -- */
+
+.cm-editor .cm-panels {
+  background: var(--bg-elevated);
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+}
+
+.cm-editor .cm-panels-bottom {
+  border-top: 1px solid var(--border);
+  border-bottom: none;
+}
+
+.cm-editor .cm-panel.cm-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+}
+
+.cm-editor .cm-panel.cm-search input[type="text"] {
+  padding: 5px 8px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  outline: none;
+}
+
+.cm-editor .cm-panel.cm-search input[type="text"]:focus {
+  border-color: var(--accent);
+}
+
+.cm-editor .cm-panel.cm-search button {
+  padding: 4px 9px;
+  background: var(--bg);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.cm-editor .cm-panel.cm-search button:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.cm-editor .cm-panel.cm-search label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+}
+
+.cm-editor .cm-panel.cm-search [name="close"] {
+  padding: 0 6px;
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  font-size: 16px;
+}
+
+.cm-editor .cm-searchMatch {
+  background: var(--mark-bg);
+  outline: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 2px;
+}
+
+.cm-editor .cm-searchMatch-selected {
+  background: var(--accent);
+  color: #fff;
+}
+
+.cm-editor .cm-selectionMatch {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-radius: 2px;
+}
+
+/* Autocomplete (the slash menu) */
+.cm-editor .cm-tooltip.cm-tooltip-autocomplete {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.cm-editor .cm-tooltip-autocomplete > ul {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  max-height: 260px;
+}
+
+.cm-editor .cm-tooltip-autocomplete > ul > li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 5px 10px;
+  color: var(--text-muted);
+}
+
+.cm-editor .cm-tooltip-autocomplete > ul > li[aria-selected] {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.cm-editor .cm-completionLabel {
+  font-family: var(--font-mono);
+}
+
+.cm-editor .cm-completionDetail {
+  margin-left: auto;
+  color: var(--text-faint);
+  font-style: normal;
+  font-size: 11px;
+}

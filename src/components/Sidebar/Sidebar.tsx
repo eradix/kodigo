@@ -1,4 +1,5 @@
 import * as ipc from "../../lib/ipc";
+import { parentOf } from "../../lib/paths";
 import { SidebarView, useStore } from "../../state/store";
 import { FileTree } from "./FileTree";
 import { SearchPanel } from "./SearchPanel";
@@ -20,7 +21,9 @@ export function Sidebar({ onSwitchVault }: { onSwitchVault: () => void }) {
   const newNote = async () => {
     const store = useStore.getState();
     try {
-      const rel = await ipc.createNote("", "Untitled");
+      // Alongside the note you are in, matching Ctrl+N and the context menu,
+      // rather than always dropping new notes at the vault root.
+      const rel = await ipc.createNote(parentOf(store.activeRel), "Untitled");
       await store.refreshTree();
       store.openTab(rel);
     } catch (e) {

@@ -76,7 +76,9 @@ case it asks which version wins.
 | Keys | Action |
 | --- | --- |
 | `Ctrl+O` / `Ctrl+P` | Quick switcher — jump to a note by name |
-| `Ctrl+Shift+F` | Focus full-text search |
+| `Ctrl+Shift+F` | Focus full-text search across the vault |
+| `Ctrl+F` | Find within the open note |
+| `Ctrl+S` | Save now (autosave already covers this) |
 | `Ctrl+N` | New note |
 | `Ctrl+W` | Close tab |
 | `Ctrl+B` / `Ctrl+I` | Bold / italic |
@@ -86,6 +88,9 @@ case it asks which version wins.
 | `Ctrl+K` | Link |
 | `Ctrl+1` … `Ctrl+3` | Heading level |
 | `Ctrl+Shift+Q` / `L` / `T` | Quote / bullet / task line |
+
+Bullet, task and numbered markers replace each other rather than stacking, so
+`Ctrl+Shift+T` on `- buy milk` gives `- [ ] buy milk`.
 
 Type `/` at the start of a line for the insert menu (code block, table, task,
 headings, frontmatter, and so on). Selecting text brings up a floating toolbar with
@@ -120,8 +125,14 @@ src-tauri/src/            Rust backend
 cd src-tauri && cargo test
 ```
 
-Covers frontmatter and tag-extraction edge cases, path-traversal rejection, FTS5
-query building, and quick-switcher ranking.
+```bash
+npm test
+```
+
+The Rust suite covers frontmatter and tag extraction, path-traversal and symlink
+rejection, FTS5 query building, quick-switcher ranking, incremental rescans, and
+the watcher's handling of the app's own saves. The frontend suite covers the
+Markdown formatting commands, word counting and path helpers.
 
 ## Not built yet
 

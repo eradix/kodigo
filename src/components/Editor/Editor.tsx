@@ -2,7 +2,7 @@ import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirro
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { bracketMatching, indentOnInput } from "@codemirror/language";
 import { languages } from "@codemirror/language-data";
-import { highlightSelectionMatches, searchKeymap } from "@codemirror/search";
+import { highlightSelectionMatches, search, searchKeymap } from "@codemirror/search";
 import { Annotation, EditorState } from "@codemirror/state";
 import {
   drawSelection,
@@ -15,6 +15,7 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as ipc from "../../lib/ipc";
+import { countDoc } from "../../lib/text";
 import type { NoteChanged } from "../../lib/types";
 import { useStore } from "../../state/store";
 import { codeBlocks } from "./codeBlocks";
@@ -42,6 +43,7 @@ export function Editor() {
   const setDirty = useStore((s) => s.setDirty);
   const closeTab = useStore((s) => s.closeTab);
   const toast = useStore((s) => s.toast);
+  const setDocStats = useStore((s) => s.setDocStats);
 
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -54,6 +56,9 @@ export function Editor() {
 
   const [toolbar, setToolbar] = useState<ToolbarPosition | null>(null);
   const [conflict, setConflict] = useState<string | null>(null);
+  /** Lets the editor keymap reach the current flush without rebuilding itself. */
+  const flushRef = useRef<() => Promise<void>>(async () => {});
+  const statsTimerRef = useRef<number | null>(null);
 
   /** Writes every queued note. Called on a timer, on tab switch and on close. */
   const flush = useCallback(async () => {
@@ -75,6 +80,8 @@ export function Editor() {
     }
   }, [setDirty, toast]);
 
+  flushRef.current = flush;
+
   const scheduleFlush = useCallback(() => {
     if (timerRef.current !== null) window.clearTimeout(timerRef.current);
     timerRef.current = window.setTimeout(() => void flush(), AUTOSAVE_MS);
@@ -94,9 +101,13 @@ export function Editor() {
       return;
     }
     const rect = host.getBoundingClientRect();
+    const above = Math.min(start.top, end.top) - rect.top - 8;
+    // Near the top of the pane there is no room above the selection, so sit
+    // under it instead of being clipped off the edge.
+    const flipped = above < 34;
     setToolbar({
       x: (start.left + end.right) / 2 - rect.left,
-      y: Math.min(start.top, end.top) - rect.top - 8,
+      y: flipped ? Math.max(start.bottom, end.bottom) - rect.top + 34 : above,
     });
   }, []);
 
@@ -129,7 +140,24 @@ export function Editor() {
           EditorView.lineWrapping,
           // Formatting bindings come first so Ctrl+E and friends win over any
           // default with the same chord.
-          keymap.of([...formattingKeymap, ...searchKeymap, ...historyKeymap, ...defaultKeymap, indentWithTab]),
+          search({ top: true }),
+          keymap.of([
+            // Autosave already covers this, but Ctrl+S is muscle memory and a
+            // note app that ignores it feels broken.
+            {
+              key: "Mod-s",
+              preventDefault: true,
+              run: () => {
+                void flushRef.current();
+                return true;
+              },
+            },
+            ...formattingKeymap,
+            ...searchKeymap,
+            ...historyKeymap,
+            ...defaultKeymap,
+            indentWithTab,
+          ]),
           markdown({ base: markdownLanguage, codeLanguages: languages }),
           codeHighlighting,
           markdownStyling,
@@ -146,10 +174,16 @@ export function Editor() {
             if (update.docChanged || update.selectionSet || update.focusChanged) {
               updateToolbar(update.view);
             }
+            if (update.docChanged && statsTimerRef.current === null) {
+              statsTimerRef.current = window.setTimeout(() => {
+                statsTimerRef.current = null;
+                setDocStats(countDoc(update.view.state.doc.toString()));
+              }, 400);
+            }
           }),
         ],
       }),
-    [scheduleFlush, setDirty, updateToolbar],
+    [scheduleFlush, setDirty, setDocStats, updateToolbar],
   );
 
   // Swap the shown document when the active tab changes.
@@ -171,6 +205,7 @@ export function Editor() {
       if (!activeRel) {
         shownRelRef.current = null;
         view.setState(makeState(""));
+        setDocStats(null);
         return;
       }
       let state = statesRef.current.get(activeRel);
@@ -189,6 +224,7 @@ export function Editor() {
       }
       shownRelRef.current = activeRel;
       view.setState(state);
+      setDocStats(countDoc(state.doc.toString()));
       view.focus();
       setToolbar(null);
       setConflict(null);
@@ -197,7 +233,7 @@ export function Editor() {
     return () => {
       cancelled = true;
     };
-  }, [activeRel, closeTab, flush, makeState, toast]);
+  }, [activeRel, closeTab, flush, makeState, setDocStats, toast]);
 
   /** Brings an open tab in line with what is now on disk. */
   const reloadFromDisk = useCallback(
@@ -211,6 +247,7 @@ export function Editor() {
           : statesRef.current.get(relPath)?.doc.toString();
 
         const settle = () => {
+          if (shown) setDocStats(countDoc(content));
           pendingRef.current.delete(relPath);
           setDirty(relPath, false);
           setConflict((existing) => (existing === relPath ? null : existing));
@@ -243,7 +280,7 @@ export function Editor() {
         toast(ipc.errorMessage(e), "error");
       }
     },
-    [makeState, setDirty, toast],
+    [makeState, setDirty, setDocStats, toast],
   );
 
   // React to edits made outside the app.
