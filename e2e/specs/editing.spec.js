@@ -241,6 +241,22 @@ describe("creating notes and folders", () => {
 
   it("creates a note from the sidebar button", async () => {
     await $('[title="New note"]').click();
+    await browser.pause(1500);
+
+    // Report what the sidebar actually looks like. "Element not found" says
+    // nothing about whether the note was created, whether the tree refreshed,
+    // or whether an error was raised instead.
+    const state = await browser.execute(() => ({
+      inputs: document.querySelectorAll(".sidebar-body input").length,
+      rows: [...document.querySelectorAll(".sidebar-body [title]")].map((el) =>
+        el.getAttribute("title"),
+      ),
+      view: document.querySelector('[role="tab"][aria-selected="true"]')?.textContent,
+      toasts: [...document.querySelectorAll(".toast")].map((el) => el.textContent),
+    }));
+    console.log("SIDEBAR STATE:", JSON.stringify(state));
+    console.log("ON DISK:", JSON.stringify(fs.readdirSync(VAULT_ROOT)));
+
     await nameIt("made-by-button");
     expect(fs.existsSync(path.join(VAULT_ROOT, "made-by-button.md"))).toBe(true);
   });
