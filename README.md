@@ -40,10 +40,55 @@ Then:
 npm install && npm run tauri dev
 ```
 
-To produce a bundle (`.deb` / AppImage under `src-tauri/target/release/bundle/`):
+## Building installers
+
+Tauri links against the system webview — WebKitGTK on Linux, WebView2 on Windows —
+so each installer is built on the platform it targets. There is no single machine
+that can produce every format.
+
+### Linux
 
 ```bash
 npm run tauri build
+```
+
+Produces `.deb`, `.rpm` and `.AppImage` under `src-tauri/target/release/bundle/`.
+The AppImage is self-contained and needs no install; the `.deb` and `.rpm` depend
+on `libwebkit2gtk-4.1-0` and `libgtk-3-0`, which any desktop Linux already has.
+
+Build on the oldest distribution you intend to support: the binaries run on that
+glibc and anything newer, not the other way round.
+
+### Windows
+
+Pick whichever fits how you work:
+
+**On Windows itself** — the supported route, and the only one that produces an
+MSI. Install [Rust](https://rustup.rs) and the *Desktop development with C++*
+workload from the Visual Studio Build Tools, then from a Windows checkout:
+
+```bash
+npm install && npm run tauri build
+```
+
+You get an MSI and an NSIS `.exe` under `src-tauri\target\release\bundle\`.
+Both fetch the WebView2 runtime at install time if the machine lacks it, which is
+only Windows 10 before 21H2.
+
+**From GitHub** — push the repository and run the *Build installers* workflow in
+[.github/workflows/release.yml](.github/workflows/release.yml), by tag or by hand.
+It builds both platforms, runs the test suites first, and attaches every installer
+to a draft release.
+
+**Cross-compiled from Linux** — possible but limited: NSIS only, no MSI. Needs a
+Windows C toolchain, because the bundled SQLite is compiled from source:
+
+```bash
+sudo apt install -y clang lld nsis && cargo install cargo-xwin && rustup target add x86_64-pc-windows-msvc
+```
+
+```bash
+npm run tauri build -- --runner cargo-xwin --target x86_64-pc-windows-msvc
 ```
 
 ### Running under WSL

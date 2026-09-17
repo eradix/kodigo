@@ -30,6 +30,16 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "publisher": "Gerald Digamon",
+    "category": "Productivity",
+    "shortDescription": "A local-first Markdown notes app",
+    "longDescription": "Kodigo turns any folder of Markdown files into a searchable notebook: a file tree, a tabbed editor with live Markdown styling and code-block tooling, full-text search, and tags. Your notes stay plain .md files on disk.",
+    "copyright": "Copyright (c) 2026 Gerald Digamon",
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      }
+    }
   }
 }
