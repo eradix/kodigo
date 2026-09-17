@@ -64,8 +64,25 @@ glibc and anything newer, not the other way round.
 Pick whichever fits how you work:
 
 **On Windows itself** — the supported route, and the only one that produces an
-MSI. Install [Rust](https://rustup.rs) and the *Desktop development with C++*
-workload from the Visual Studio Build Tools, then from a Windows checkout:
+MSI. It needs three things, in this order:
+
+1. The *Desktop development with C++* workload from the Visual Studio Build
+   Tools, which supplies the MSVC linker.
+2. [Rust](https://rustup.rs), or `winget install --id Rustlang.Rustup -e`. Then
+   **open a new terminal**: rustup adds `%USERPROFILE%\.cargo\bin` to your PATH,
+   but shells already running keep their old copy, and the build fails with
+   `failed to run 'cargo metadata' ... program not found`. A Rust installed
+   inside WSL does not count — it is a Linux binary.
+3. Node, from [nodejs.org](https://nodejs.org).
+
+Check `rustup show` reports `stable-x86_64-pc-windows-msvc`. A `gnu` default
+means rustup could not find the build tools from step 1, and Tauri will not link
+against WebView2; fix step 1, then
+`rustup default stable-x86_64-pc-windows-msvc`.
+
+Work from a checkout on a Windows path such as `C:\Users\you\grd-kodigo`, not
+from `\\wsl$\...` — Cargo across that boundary is slow enough to look broken.
+Then:
 
 ```powershell
 npm install
