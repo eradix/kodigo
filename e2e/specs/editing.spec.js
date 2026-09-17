@@ -244,7 +244,12 @@ describe("creating notes and folders", () => {
     // Let the watcher's refresh land before typing into the field.
     await browser.pause(1200);
     await $(selector).waitForExist({ timeout: 10_000 });
-    await browser.keys(name);
+    // One character per round trip. Sent as a single string, WebDriver outruns
+    // React's re-render of the controlled field and a repeated letter gets
+    // swallowed — "button" arrived as "buton".
+    for (const character of name) {
+      await browser.keys(character);
+    }
     await browser.keys(Key.Enter);
     await browser.pause(800);
   }
