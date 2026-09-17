@@ -29,6 +29,8 @@ interface Store {
   indexing: { done: number; total: number } | null;
   /** Word and character counts for the note in front, for the status bar. */
   docStats: DocStats | null;
+  /** The entry whose name is being edited in the tree, if any. */
+  renaming: string | null;
 
   setVault: (vault: Vault | null, tree: TreeNode[]) => void;
   refreshTree: () => Promise<void>;
@@ -43,6 +45,7 @@ interface Store {
   dismissToast: (id: number) => void;
   setIndexing: (progress: { done: number; total: number } | null) => void;
   setDocStats: (stats: DocStats | null) => void;
+  setRenaming: (relPath: string | null) => void;
   /** Creates a note or folder and refreshes the tree. Returns its path. */
   createEntry: (kind: "note" | "folder", parentRel: string) => Promise<string | null>;
 }
@@ -77,6 +80,7 @@ export const useStore = create<Store>((set, get) => ({
   toasts: [],
   indexing: null,
   docStats: null,
+  renaming: null,
 
   setVault: (vault, tree) => set({ vault, tree, tabs: [], activeRel: null }),
 
@@ -151,6 +155,8 @@ export const useStore = create<Store>((set, get) => ({
 
   setDocStats: (docStats) => set({ docStats }),
 
+  setRenaming: (renaming) => set({ renaming }),
+
   createEntry: async (kind, parentRel) => {
     try {
       const rel =
@@ -159,6 +165,10 @@ export const useStore = create<Store>((set, get) => ({
           : await ipc.createFolder(parentRel, "New folder");
       await get().refreshTree();
       if (kind === "note") get().openTab(rel);
+      // Every route to creating something lands in the rename field: "Untitled"
+      // is never the name anybody wanted. The tree has to be on screen for that
+      // field to be visible, so switch to it.
+      set({ sidebarView: "files", renaming: rel });
       return rel;
     } catch (e) {
       get().toast(ipc.errorMessage(e), "error");

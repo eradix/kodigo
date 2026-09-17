@@ -142,7 +142,10 @@ export function FileTree() {
   const tree = useStore((s) => s.tree);
   const activeRel = useStore((s) => s.activeRel);
   const [menu, setMenu] = useState<MenuTarget | null>(null);
-  const [renaming, setRenaming] = useState<string | null>(null);
+  // Renaming lives in the store because creation starts it, and that can be
+  // triggered from the sidebar header as well as from this tree.
+  const renaming = useStore((s) => s.renaming);
+  const setRenaming = useStore((s) => s.setRenaming);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   // Open whatever folders are needed to show the active note. Folders the user
@@ -205,10 +208,7 @@ export function FileTree() {
 
   const create = async (parentRel: string, kind: "note" | "folder") => {
     const rel = await store().createEntry(kind, parentRel);
-    if (!rel) return;
-    if (parentRel) setExpanded((current) => new Set(current).add(parentRel));
-    // Drop straight into renaming it: "Untitled" is never what was wanted.
-    setRenaming(rel);
+    if (rel && parentRel) setExpanded((current) => new Set(current).add(parentRel));
   };
 
   if (tree.length === 0) {
