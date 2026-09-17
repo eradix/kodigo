@@ -225,7 +225,10 @@ export function Editor() {
       shownRelRef.current = activeRel;
       view.setState(state);
       setDocStats(countDoc(state.doc.toString()));
-      view.focus();
+      // Creating a note opens it, and the rename field in the tree is focused at
+      // the same moment. Taking focus here would blur that field, which commits
+      // it — the naming box would vanish before it could be typed into.
+      if (!useStore.getState().renaming) view.focus();
       setToolbar(null);
       setConflict(null);
     })();
