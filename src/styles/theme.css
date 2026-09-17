@@ -158,13 +158,21 @@ input {
 .workspace {
   display: grid;
   grid-template-columns: var(--sidebar-width) 1fr;
+  /* minmax(0, 1fr), not the implicit auto row. An auto row is sized by its
+     content, so a long note made the row — and with it the whole layout —
+     taller than the window, and body{overflow:hidden} clipped the remainder:
+     the end of the note simply could not be reached. The 0 minimum lets the row
+     be exactly the window height regardless of what is inside it. */
+  grid-template-rows: minmax(0, 1fr);
   height: 100%;
+  overflow: hidden;
 }
 
 .sidebar {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
   background: var(--bg-sunken);
   border-right: 1px solid var(--border);
 }
@@ -372,6 +380,7 @@ input {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
   background: var(--bg);
 }
 
