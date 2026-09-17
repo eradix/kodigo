@@ -12,7 +12,23 @@ const SETTLE = 2000;
 
 const editor = () => $(".cm-content");
 
+/** Opens a note, expanding whatever folders stand between it and the root. */
 async function openNote(rel) {
+  const parts = rel.split("/");
+  let folder = "";
+  for (const part of parts.slice(0, -1)) {
+    folder = folder ? `${folder}/${part}` : part;
+    const row = await $(`[title="${folder}"]`);
+    await row.waitForClickable();
+    // Folders start collapsed, and clicking an open one would close it again.
+    const chevron = await row.$(".chevron");
+    const classes = (await chevron.getAttribute("class")) ?? "";
+    if (!classes.includes("open")) {
+      await row.click();
+      await browser.pause(200);
+    }
+  }
+
   const row = await $(`[title="${rel}"]`);
   await row.waitForClickable();
   await row.click();
@@ -21,9 +37,21 @@ async function openNote(rel) {
   await browser.pause(400);
 }
 
-async function type(text) {
+/**
+ * Puts the caret at the end of the note.
+ *
+ * The click is what gives the editor focus, and it has to come before Ctrl+End:
+ * clicking afterwards would drop the caret wherever the pointer happened to be
+ * and quietly undo the jump.
+ */
+async function focusEnd() {
   await editor().click();
-  await browser.keys(text);
+  await browser.keys([Key.Ctrl, Key.End]);
+}
+
+/** Presses Enter. A newline inside browser.keys() is typed, not pressed. */
+async function newLine() {
+  await browser.keys(Key.Enter);
 }
 
 describe("opening a vault", () => {
@@ -32,12 +60,11 @@ describe("opening a vault", () => {
     // for the sidebar cannot distinguish a vault that failed to open from a
     // window that never came up at all, and the difference is the whole
     // diagnosis.
-    await browser.waitUntil(
-      async () => (await $$(".sidebar, .welcome")).length > 0,
-      { timeout: 60_000, timeoutMsg: "neither the workspace nor the welcome screen appeared" },
-    );
-    const welcome = await $(".welcome");
-    if (await welcome.isExisting()) {
+    await browser.waitUntil(async () => (await $$(".sidebar, .welcome")).length > 0, {
+      timeout: 60_000,
+      timeoutMsg: "neither the workspace nor the welcome screen appeared",
+    });
+    if (await $(".welcome").isExisting()) {
       throw new Error("the app started on the welcome screen: --vault was not honoured");
     }
 
@@ -47,16 +74,21 @@ describe("opening a vault", () => {
 
   it("opens a note when it is clicked", async () => {
     await openNote("welcome.md");
-    await expect(editor()).toHaveTextContaining("The first note.");
+    expect(await editor().getText()).toContain("The first note.");
     await expect($(".tab .name")).toHaveText("welcome");
+  });
+
+  it("reveals a note inside a folder", async () => {
+    await openNote("projects/nested.md");
+    expect(await editor().getText()).toContain("Inside a folder.");
   });
 });
 
 describe("typing and saving", () => {
   it("writes what was typed to the file on disk", async () => {
     await openNote("welcome.md");
-    await browser.keys([Key.Ctrl, Key.End]);
-    await type(" Typed by a test.");
+    await focusEnd();
+    await browser.keys("Typed by a test.");
     await browser.pause(SETTLE);
 
     expect(readNote("welcome.md")).toContain("Typed by a test.");
@@ -72,9 +104,9 @@ describe("typing and saving", () => {
    */
   it("leaves the caret alone when autosave fires", async () => {
     await openNote("second.md");
-    await browser.keys([Key.Ctrl, Key.End]);
+    await focusEnd();
 
-    await type("FIRST");
+    await browser.keys("FIRST");
     // Long enough for the save, and for any watcher echo to come back.
     await browser.pause(SETTLE);
     await browser.keys("SECOND");
@@ -87,13 +119,13 @@ describe("typing and saving", () => {
 
   it("keeps each tab's own text when switching between them", async () => {
     await openNote("welcome.md");
-    await browser.keys([Key.Ctrl, Key.End]);
-    await type(" belongs-to-welcome");
+    await focusEnd();
+    await browser.keys("belongs-to-welcome");
     await browser.pause(SETTLE);
 
     await openNote("projects/nested.md");
-    await browser.keys([Key.Ctrl, Key.End]);
-    await type(" belongs-to-nested");
+    await focusEnd();
+    await browser.keys("belongs-to-nested");
     await browser.pause(SETTLE);
 
     expect(readNote("welcome.md")).toContain("belongs-to-welcome");
@@ -105,8 +137,9 @@ describe("typing and saving", () => {
 describe("editor commands", () => {
   it("wraps a selection in bold with Ctrl+B", async () => {
     await openNote("welcome.md");
-    await browser.keys([Key.Ctrl, Key.End]);
-    await type("\nplainword");
+    await focusEnd();
+    await newLine();
+    await browser.keys("plainword");
     // Select the word just typed, then bold it.
     for (let i = 0; i < "plainword".length; i++) {
       await browser.keys([Key.Shift, Key.ArrowLeft]);
@@ -119,9 +152,10 @@ describe("editor commands", () => {
 
   it("inserts a fenced block from the slash menu", async () => {
     await openNote("second.md");
-    await browser.keys([Key.Ctrl, Key.End]);
-    await type("\n/code");
-    // Let the completion list appear before accepting it.
+    await focusEnd();
+    // The menu only opens when the slash is the first thing on the line.
+    await newLine();
+    await browser.keys("/code");
     await browser.pause(700);
     await browser.keys(Key.Enter);
     await browser.pause(SETTLE);
