@@ -1,21 +1,27 @@
-/* Design tokens. Dark is the default; [data-theme="light"] on <html> flips them. */
+/* Design tokens. Dark is the default; [data-theme="light"] on <html> flips them.
+   Dark is neutral grey carrying ice blue; light is white carrying navy. The
+   greys are deliberately untinted, so the blue is the only colour in the frame
+   and the eye goes to it. */
 :root {
-  --bg: #16181d;
-  --bg-elevated: #1d2027;
-  --bg-sunken: #111318;
-  --bg-hover: #252932;
-  --bg-active: #2c313c;
-  --border: #2a2e37;
-  --text: #dfe3ea;
-  --text-muted: #8b93a3;
-  --text-faint: #646c7a;
-  --accent: #7aa2f7;
-  --accent-soft: #7aa2f733;
-  --danger: #f77a7a;
-  --mark-bg: #7aa2f733;
-  --mark-text: #b9cdf9;
-  --code-bg: #1a1d24;
-  --shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  --bg: #1d1f21;
+  --bg-elevated: #26292c;
+  --bg-sunken: #17191b;
+  --bg-hover: #2f3336;
+  --bg-active: #3a3f43;
+  --border: #34383c;
+  --text: #e6e8ea;
+  --text-muted: #a2a8ad;
+  --text-faint: #71777c;
+  --accent: #8fd6f2;
+  /* What sits on top of a filled accent. Ice blue is a light colour, so its
+     contrast partner is dark ink rather than white. */
+  --on-accent: #10242c;
+  --accent-soft: #8fd6f229;
+  --danger: #f08a8a;
+  --mark-bg: #8fd6f233;
+  --mark-text: #cfeefb;
+  --code-bg: #202326;
+  --shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
 
   --sidebar-width: 252px;
   --radius: 6px;
@@ -25,21 +31,22 @@
 
 :root[data-theme="light"] {
   --bg: #ffffff;
-  --bg-elevated: #f7f8fa;
-  --bg-sunken: #eef0f4;
-  --bg-hover: #e9ecf1;
-  --bg-active: #dfe4ec;
-  --border: #dcdfe6;
-  --text: #1f2430;
-  --text-muted: #5f6775;
-  --text-faint: #8c94a3;
-  --accent: #3b6fd4;
-  --accent-soft: #3b6fd422;
-  --danger: #c0392b;
-  --mark-bg: #ffe08a;
-  --mark-text: #4a3a00;
-  --code-bg: #f2f4f8;
-  --shadow: 0 8px 28px rgba(20, 30, 50, 0.15);
+  --bg-elevated: #f7f9fc;
+  --bg-sunken: #eff3f8;
+  --bg-hover: #e4ebf4;
+  --bg-active: #d5e0ee;
+  --border: #d5dde7;
+  --text: #101c2e;
+  --text-muted: #46566e;
+  --text-faint: #7a879a;
+  --accent: #12447f;
+  --on-accent: #ffffff;
+  --accent-soft: #12447f1f;
+  --danger: #b3261e;
+  --mark-bg: #12447f26;
+  --mark-text: #0b2d57;
+  --code-bg: #f2f6fb;
+  --shadow: 0 8px 28px rgba(16, 28, 46, 0.14);
 }
 
 * {
@@ -136,7 +143,7 @@ input {
 
 .primary-button {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   padding: 9px 18px;
   border-radius: var(--radius);
   font-weight: 600;
@@ -245,6 +252,7 @@ input {
 .tree-row.selected {
   background: var(--accent-soft);
   color: var(--text);
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .tree-row .label {
@@ -400,6 +408,9 @@ input {
 .tab.active {
   background: var(--bg);
   color: var(--text);
+  /* An inset rule rather than a real border, so the tab does not shift by a
+     pixel when it becomes active. */
+  box-shadow: inset 0 2px 0 var(--accent);
 }
 
 .tab .name {
@@ -768,27 +779,28 @@ input {
 
 /* Syntax colours for code inside fenced blocks. */
 :root {
-  --syn-keyword: #bb9af7;
-  --syn-string: #9ece6a;
-  --syn-number: #ff9e64;
-  --syn-comment: #5c6370;
-  --syn-fn: #7aa2f7;
-  --syn-type: #2ac3de;
-  --syn-var: #c0caf5;
-  --syn-op: #89ddff;
-  --syn-invalid: #f77a7a;
+  --syn-keyword: #c8a6f0;
+  --syn-string: #a3d98b;
+  --syn-number: #f0b47a;
+  --syn-comment: #767d84;
+  /* Function names take the accent, so code and interface agree. */
+  --syn-fn: #8fd6f2;
+  --syn-type: #7fd8d0;
+  --syn-var: #dfe3e6;
+  --syn-op: #a9c7d6;
+  --syn-invalid: #f08a8a;
 }
 
 :root[data-theme="light"] {
-  --syn-keyword: #8250df;
-  --syn-string: #0a7d3d;
-  --syn-number: #b35000;
-  --syn-comment: #7b8394;
-  --syn-fn: #1c5fd0;
-  --syn-type: #0b7285;
-  --syn-var: #24292f;
-  --syn-op: #0b6a91;
-  --syn-invalid: #c0392b;
+  --syn-keyword: #6b2bb5;
+  --syn-string: #0a6b35;
+  --syn-number: #9a4b00;
+  --syn-comment: #6b7688;
+  --syn-fn: #12447f;
+  --syn-type: #0a5f72;
+  --syn-var: #16233a;
+  --syn-op: #2a5d86;
+  --syn-invalid: #b3261e;
 }
 
 /* ---------------------------------------------------------- context menu -- */
@@ -895,7 +907,7 @@ input {
 
 .cm-editor .cm-searchMatch-selected {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .cm-editor .cm-selectionMatch {
@@ -961,4 +973,42 @@ input {
 .empty-actions button:hover {
   background: var(--bg-hover);
   color: var(--text);
+}
+
+
+/* ------------------------------------------------------ focus and motion -- */
+
+/* A visible focus ring for keyboard users, on the app's chrome only: CodeMirror
+   draws its own caret and selection, and an outline around the whole editor
+   would be noise. :focus-visible keeps it away from mouse clicks. */
+button:focus-visible,
+input:focus-visible,
+[role="tab"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-radius: var(--radius);
+}
+
+.cm-editor :focus-visible {
+  outline: none;
+}
+
+.tree-row,
+.tab,
+.icon-button,
+.sidebar-views button,
+.search-hit,
+.tag-row,
+.recent-item,
+.empty-actions button,
+.context-menu button {
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
 }
