@@ -233,9 +233,13 @@ sudo apt install -y webkit2gtk-driver && cargo install tauri-driver
 ```
 
 ```bash
-npm run build && cargo build --manifest-path src-tauri/Cargo.toml
+npm run tauri build -- --debug --no-bundle
 KODIGO_BINARY=src-tauri/target/debug/kodigo npm run test:e2e
 ```
+
+Use the Tauri CLI rather than `cargo build` here. A plain cargo build produces a
+development binary that loads the interface from the vite dev server, so without
+one running the window is simply blank.
 
 The run creates its own vault under a temporary `XDG_DATA_HOME`, so it cannot
 see or damage your real notes or index. On a headless machine, prefix the

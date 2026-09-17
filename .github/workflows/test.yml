@@ -75,12 +75,14 @@ jobs:
 
       - run: npm ci
 
-      # A debug build: these tests exercise behaviour, and an optimised build
-      # would add several minutes for nothing.
+      # --debug keeps the compile quick, since these tests exercise behaviour
+      # rather than speed. It has to go through the Tauri CLI rather than cargo:
+      # a plain `cargo build` produces a development binary that loads the UI
+      # from the vite dev server, so with no server running the window comes up
+      # blank and every test fails looking for an element that never renders.
+      # --no-bundle skips building installers, which this job has no use for.
       - name: Build the app
-        run: |
-          npm run build
-          cargo build --manifest-path src-tauri/Cargo.toml
+        run: npm run tauri build -- --debug --no-bundle
 
       - name: Run the end-to-end suite
         run: xvfb-run --auto-servernum npm run test:e2e

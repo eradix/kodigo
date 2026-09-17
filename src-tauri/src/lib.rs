@@ -1,3 +1,4 @@
+mod cli;
 mod commands;
 mod error;
 mod import;
@@ -14,14 +15,18 @@ use state::AppState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let cli = cli::parse(std::env::args());
+
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState::default())
+        .manage(cli)
         .invoke_handler(tauri::generate_handler![
             commands::open_vault,
             commands::close_vault,
             commands::current_vault,
             commands::recent_vaults,
+            commands::startup_vault,
             commands::list_tree,
             commands::read_note,
             commands::write_note,

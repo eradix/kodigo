@@ -4,7 +4,7 @@ use crate::error::{AppError, Result};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::path::{Component, Path, PathBuf};
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 /// File extensions the app treats as notes. Anything else is invisible to the
 /// tree, the index and the importer.
@@ -135,12 +135,7 @@ pub struct RecentVault {
 }
 
 fn recents_file(app: &AppHandle) -> Result<PathBuf> {
-    let dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| AppError::Other(format!("No app data directory: {e}")))?;
-    std::fs::create_dir_all(&dir)?;
-    Ok(dir.join("recent-vaults.json"))
+    Ok(crate::cli::data_dir(app)?.join("recent-vaults.json"))
 }
 
 pub fn read_recents(app: &AppHandle) -> Vec<RecentVault> {

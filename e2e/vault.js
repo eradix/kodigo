@@ -3,12 +3,11 @@ import os from "node:os";
 import path from "node:path";
 
 /**
- * A throwaway vault plus a throwaway app-data directory for one test run.
+ * A throwaway vault plus a throwaway data directory for one test run.
  *
- * The app-data directory is the important half. Kodigo keeps its recent-vault
- * list and its index under `$XDG_DATA_HOME`, so pointing that at a temporary
- * directory means a test run cannot see, corrupt or delete the notes and index
- * belonging to whoever is running the tests.
+ * The data directory is the important half: passing it as --data-dir keeps the
+ * recents list and the index out of the real profile, so a run cannot see,
+ * corrupt or delete the notes of whoever is running the tests.
  */
 export function createVault() {
   const base = fs.mkdtempSync(path.join(os.tmpdir(), "kodigo-e2e-"));
@@ -26,15 +25,9 @@ export function createVault() {
     fs.writeFileSync(path.join(root, rel), body);
   }
 
-  // Kodigo reopens the most recent vault on launch, so seeding this file is how
-  // a test gets a vault open without driving the folder picker, which is an OS
-  // dialog and outside the webview's reach.
-  fs.mkdirSync(path.join(dataDir, "com.kodigo.app"), { recursive: true });
-  fs.writeFileSync(
-    path.join(dataDir, "com.kodigo.app", "recent-vaults.json"),
-    JSON.stringify([{ path: root, name: "vault" }], null, 2),
-  );
-
+  // The suite does not drive the folder picker — that is an OS dialog, outside
+  // the webview's reach. The vault and this data directory are handed to the
+  // app as --vault and --data-dir instead.
   return { base, root, dataDir };
 }
 

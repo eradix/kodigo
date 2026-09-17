@@ -11,7 +11,7 @@ use crate::error::Result;
 use crate::vault::Vault;
 use rusqlite::Connection;
 use std::path::PathBuf;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 /// Bump to force every existing index to be rebuilt from scratch.
 const SCHEMA_VERSION: i64 = 1;
@@ -63,10 +63,7 @@ CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 fn index_path(app: &AppHandle, vault: &Vault) -> Result<PathBuf> {
     // Lives in app data, not in the vault: the user's notes folder stays clean and
     // syncable, and a stale index never travels with it.
-    let dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| crate::error::AppError::Other(format!("No app data directory: {e}")))?
+    let dir = crate::cli::data_dir(app)?
         .join("vaults")
         .join(&vault.id);
     std::fs::create_dir_all(&dir)?;

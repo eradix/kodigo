@@ -72,6 +72,15 @@ pub fn recent_vaults(app: AppHandle) -> Vec<RecentVault> {
     vault::read_recents(&app)
 }
 
+/// The vault named on the command line, if there was one. The frontend prefers
+/// it over the recents list on start-up.
+#[tauri::command]
+pub fn startup_vault(cli: State<crate::cli::Cli>) -> Option<String> {
+    cli.vault
+        .as_ref()
+        .map(|path| path.display().to_string())
+}
+
 #[tauri::command]
 pub fn list_tree(state: State<AppState>) -> Result<Vec<TreeNode>> {
     let vault = state.vault()?;

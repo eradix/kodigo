@@ -29,8 +29,20 @@ async function type(text) {
 }
 
 describe("opening a vault", () => {
-  it("reopens the most recent vault and lists its notes", async () => {
-    await $(".sidebar").waitForExist({ timeout: 60_000 });
+  it("opens the vault it was given and lists its notes", async () => {
+    // Report what actually rendered when this fails. A bare "element not found"
+    // for the sidebar cannot distinguish a vault that failed to open from a
+    // window that never came up at all, and the difference is the whole
+    // diagnosis.
+    await browser.waitUntil(
+      async () => (await $$(".sidebar, .welcome")).length > 0,
+      { timeout: 60_000, timeoutMsg: "neither the workspace nor the welcome screen appeared" },
+    );
+    const welcome = await $(".welcome");
+    if (await welcome.isExisting()) {
+      throw new Error("the app started on the welcome screen: --vault was not honoured");
+    }
+
     await expect($('[title="welcome.md"]')).toExist();
     await expect($('[title="second.md"]')).toExist();
   });

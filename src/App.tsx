@@ -59,8 +59,12 @@ export default function App() {
         if (existing) {
           setVault(existing, await ipc.listTree());
         } else {
-          const recents = await ipc.recentVaults();
-          if (recents[0]) await openVault(recents[0].path);
+          // A vault given on the command line wins; otherwise pick up where the
+          // last session left off.
+          const requested = await ipc.startupVault();
+          const recents = requested ? null : await ipc.recentVaults();
+          const path = requested ?? recents?.[0]?.path;
+          if (path) await openVault(path);
         }
       } catch (e) {
         toast(ipc.errorMessage(e), "error");

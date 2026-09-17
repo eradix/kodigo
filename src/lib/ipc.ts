@@ -19,6 +19,8 @@ export const openVault = (path: string) => invoke<OpenedVault>("open_vault", { p
 export const closeVault = () => invoke<void>("close_vault");
 export const currentVault = () => invoke<Vault | null>("current_vault");
 export const recentVaults = () => invoke<RecentVault[]>("recent_vaults");
+/** A vault named on the command line, which wins over the recents list. */
+export const startupVault = () => invoke<string | null>("startup_vault");
 
 export const listTree = () => invoke<TreeNode[]>("list_tree");
 export const readNote = (relPath: string) => invoke<string>("read_note", { relPath });

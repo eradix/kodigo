@@ -27,12 +27,8 @@ export const config = {
   port: 4444,
   specs: [path.join(import.meta.dirname, "specs/**/*.spec.js")],
   maxInstances: 1,
-  capabilities: [
-    {
-      maxInstances: 1,
-      "tauri:options": { application: binary },
-    },
-  ],
+  // Filled in by onPrepare, once the throwaway vault exists.
+  capabilities: [],
   framework: "mocha",
   reporters: ["spec"],
   logLevel: "warn",
@@ -51,13 +47,26 @@ export const config = {
     }
     vault = createVault();
 
+    // Both of these go on the command line rather than into the environment.
+    // The app is launched by WebKitWebDriver rather than directly, and an
+    // earlier version of this file seeded the vault through XDG_DATA_HOME and
+    // got an app that had never heard of it — every test then failed against a
+    // window still showing the welcome screen. Arguments reach it; exported
+    // variables evidently do not.
+    config.capabilities = [
+      {
+        maxInstances: 1,
+        "tauri:options": {
+          application: binary,
+          args: ["--vault", vault.root, "--data-dir", vault.dataDir],
+        },
+      },
+    ];
+
     driver = spawn("tauri-driver", [], {
       stdio: [null, process.stdout, process.stderr],
       env: {
         ...process.env,
-        // Redirects the app's recent-vault list and search index into the
-        // temporary directory, so the suite never touches real notes.
-        XDG_DATA_HOME: vault.dataDir,
         // WebKitGTK's accelerated paths are unavailable on CI runners and
         // under WSL; without this the window never appears.
         WEBKIT_DISABLE_DMABUF_RENDERER: "1",
