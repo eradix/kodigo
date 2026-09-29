@@ -44,7 +44,22 @@ const PREVIEW_NOTE = [
   "",
 ].join("\n");
 
+const CODE_NOTE = [
+  "# Highlighted code",
+  "",
+  "```javascript",
+  'const answer = "yes";',
+  "```",
+  "",
+  "```php",
+  "// A Markdown PHP fence normally has no opening tag.",
+  "enum Direction { case North; case South; }",
+  "```",
+  "",
+].join("\n");
+
 const NOTES = {
+  "code.md": CODE_NOTE,
   "preview.md": PREVIEW_NOTE,
   "welcome.md": "# Welcome\n\nThe first note.\n",
   "second.md": "# Second\n\nAnother note entirely.\n",

@@ -1,7 +1,6 @@
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { bracketMatching, indentOnInput } from "@codemirror/language";
-import { languages } from "@codemirror/language-data";
 import { highlightSelectionMatches, search, searchKeymap } from "@codemirror/search";
 import { Annotation, EditorState } from "@codemirror/state";
 import {
@@ -19,6 +18,7 @@ import { countDoc } from "../../lib/text";
 import type { NoteChanged } from "../../lib/types";
 import { useStore } from "../../state/store";
 import { codeBlocks } from "./codeBlocks";
+import { codeLanguages } from "./codeLanguages";
 import { codeHighlighting } from "./highlight";
 import { livePreview } from "./livePreview";
 import { markdownStyling } from "./markdownStyling";
@@ -159,7 +159,7 @@ export function Editor() {
             ...defaultKeymap,
             indentWithTab,
           ]),
-          markdown({ base: markdownLanguage, codeLanguages: languages }),
+          markdown({ base: markdownLanguage, codeLanguages }),
           codeHighlighting,
           markdownStyling,
           // After the styling plugin: this one hides the syntax that plugin has

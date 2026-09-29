@@ -516,13 +516,22 @@ input {
   background: var(--accent-soft) !important;
 }
 
-/* CodeMirror draws its own caret and sets caret-color: transparent !important on
-   the content, so the colour has to be set here, on that element. It injects its
-   stylesheet after this one at equal specificity, so without !important its own
-   black caret wins — which is all but invisible on the dark grey background. */
+/* CodeMirror draws its own caret and blinks the entire cursor layer by toggling
+   its opacity. A solid layer keeps the insertion point visible between keyboard
+   moves—most importantly against light code-block lines. */
+.cm-editor.cm-focused > .cm-scroller > .cm-cursorLayer {
+  animation: none !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* CodeMirror injects its caret colour at runtime, so this needs !important to
+   keep the theme-aware accent in both light and dark mode. */
 .cm-editor .cm-cursor,
 .cm-editor .cm-cursor-primary {
   border-left: 2px solid var(--accent) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 /* An explicit I-beam over the text. */

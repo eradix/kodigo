@@ -366,36 +366,102 @@ describe("live preview", () => {
   });
 });
 
-describe("the caret", () => {
-  it("is drawn in a visible colour in both themes", async () => {
-    await openNote("welcome.md");
-    await editor().click();
-    await browser.pause(300);
+describe("fenced code highlighting", () => {
+  const colours = () =>
+    browser.execute(() => {
+      const lineWith = (text) =>
+        [...document.querySelectorAll(".cm-line")].find((line) => line.textContent?.includes(text));
+      const tokenIn = (lineText, token) => {
+        const line = lineWith(lineText);
+        const span = line && [...line.querySelectorAll("span")].find((part) => part.textContent === token);
+        return span ? getComputedStyle(span).color : null;
+      };
 
-    const read = () =>
-      browser.execute(() => {
-        const caret = document.querySelector(".cm-cursor");
-        if (!caret) return null;
-        const style = getComputedStyle(caret);
-        return { colour: style.borderLeftColor, width: style.borderLeftWidth };
-      });
+      return {
+        text: getComputedStyle(document.querySelector(".cm-content")).color,
+        jsKeyword: tokenIn('const answer = "yes";', "const"),
+        jsString: tokenIn('const answer = "yes";', '"yes"'),
+        phpComment: tokenIn("A Markdown PHP fence", "// A Markdown PHP fence normally has no opening tag."),
+        phpKeyword: tokenIn("enum Direction", "enum"),
+      };
+    });
 
-    const dark = await read();
-    console.log("CARET dark:", JSON.stringify(dark));
-    expect(dark).not.toBeNull();
-    expect(dark.colour).not.toBe("rgba(0, 0, 0, 0)");
+  const expectHighlighted = (palette) => {
+    expect(palette.jsKeyword).not.toBeNull();
+    expect(palette.jsString).not.toBeNull();
+    expect(palette.phpComment).not.toBeNull();
+    expect(palette.phpKeyword).not.toBeNull();
+    expect(palette.jsKeyword).not.toBe(palette.text);
+    expect(palette.jsString).not.toBe(palette.jsKeyword);
+    expect(palette.phpComment).not.toBe(palette.text);
+    expect(palette.phpKeyword).not.toBe(palette.text);
+  };
+
+  it("colours JavaScript and plain PHP fences in both themes", async () => {
+    await openNote("code.md");
+    await browser.waitUntil(async () => (await colours()).phpKeyword !== null, {
+      timeout: 10_000,
+      timeoutMsg: "the PHP parser never highlighted the fenced block",
+    });
+
+    const dark = await colours();
+    expectHighlighted(dark);
 
     await $('[title="Switch to light theme"]').click();
-    await browser.pause(400);
-    await editor().click();
     await browser.pause(300);
+    const light = await colours();
+    expectHighlighted(light);
+    expect(light.phpKeyword).not.toBe(dark.phpKeyword);
 
-    const light = await read();
-    console.log("CARET light:", JSON.stringify(light));
-    expect(light).not.toBeNull();
-    expect(light.colour).not.toBe("rgba(0, 0, 0, 0)");
-    // The two themes must not end up drawing the same caret.
-    expect(light.colour).not.toBe(dark.colour);
+    await $('[title="Switch to dark theme"]').click();
+    await browser.pause(300);
+  });
+});
+
+describe("the caret", () => {
+  const readCaret = () =>
+    browser.execute(() => {
+      const caret = document.querySelector(".cm-cursor-primary");
+      if (!caret) return null;
+      const style = getComputedStyle(caret);
+      const layer = caret.closest(".cm-cursorLayer");
+      const layerStyle = layer && getComputedStyle(layer);
+      const rect = caret.getBoundingClientRect();
+      return {
+        colour: style.borderLeftColor,
+        display: style.display,
+        height: rect.height,
+        layerAnimation: layerStyle?.animationName ?? null,
+        layerOpacity: layerStyle?.opacity ?? null,
+        layerVisibility: layerStyle?.visibility ?? null,
+        opacity: style.opacity,
+        width: style.borderLeftWidth,
+      };
+    });
+
+  it("stays visibly drawn while navigating inside a light code block", async () => {
+    await openNote("code.md");
+    await $('[title="Switch to light theme"]').click();
+    await browser.pause(300);
+    await editor().click();
+    await browser.keys([Key.Ctrl, Key.Home]);
+    // Move to the JavaScript source line and then across several highlighted
+    // tokens. Every move used to risk leaving the blink animation hidden.
+    for (let line = 1; line < 4; line++) await browser.keys(Key.ArrowDown);
+
+    for (let column = 0; column < 12; column++) {
+      await browser.keys(Key.ArrowRight);
+      const caret = await readCaret();
+      expect(caret).not.toBeNull();
+      expect(caret.display).not.toBe("none");
+      expect(caret.layerAnimation).toBe("none");
+      expect(caret.layerOpacity).toBe("1");
+      expect(caret.layerVisibility).toBe("visible");
+      expect(caret.opacity).toBe("1");
+      expect(caret.colour).not.toBe("rgba(0, 0, 0, 0)");
+      expect(caret.width).toBe("2px");
+      expect(caret.height).toBeGreaterThan(5);
+    }
 
     await $('[title="Switch to dark theme"]').click();
     await browser.pause(300);
