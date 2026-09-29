@@ -1797,7 +1797,7 @@ dependencies = [
 
 [[package]]
 name = "kodigo"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "notify",
  "notify-debouncer-full",
